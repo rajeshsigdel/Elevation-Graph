@@ -1,0 +1,113 @@
+---
+title: "ElevationGraph"
+author: "RajeshSigdel"
+date: "5/11/2020"
+output: html_document
+---
+
+---
+title: "Elevation Range"
+author: "RajeshSigdel"
+date: "5/11/2020"
+output: html_document
+---
+This is a re-creation of the elevational graph of species published in ["Distributional Patterns of Amphibians and Reptiles in Ghandruk, Annapurna Conservation Area, Nepal"](https://www.researchgate.net/publication/340393963_Distributional_Patterns_of_Amphibians_and_Reptiles_in_Ghandruk_Annapurna_Conservation_Area_Nepal) using the same dataset.
+  
+Note that I did not create the graph for the article. However, I did create the map for the article and the authors acknowledged my contribution in their acknowledgement section. 
+  
+Importing the dataset
+```{r message = FALSE, warning = FALSE}
+setwd("D:/Rfiles/Chart_Bivek/ElevationGraph") # Setting the working directory
+
+library(readxl)
+
+if (!require (tidyverse)) {install.packages ("tidyverse")}
+library(tidyverse)
+
+dataset <- read_excel("Bivek_Data.xlsx")
+
+head(dataset)  # This is a sparse matrix 
+
+# View(dataset)
+
+
+```
+
+Gather, and summarise
+
+```{r}
+a <-dataset %>% 
+  gather(key = Species, value, `Duttaphrynus melanostictus`: `Oligodon erythrogaster`)
+
+head(a)
+
+
+b <- a %>%
+  mutate (SpeciesNo = ifelse(a$value > 0, 1, 0))
+
+head(b)
+
+c <- na_if(b, 0) %>% 
+  drop_na()
+
+head(c)
+
+d <- c %>% group_by(Species) %>% 
+  summarize (Max = max(Ele), Min = min(Ele)) 
+
+head(d)
+```
+
+Now plotting
+
+```{r, fig.width=8}
+ggplot(c, aes(Ele, Species, group = Species)) + 
+  geom_line(size = 2) +
+  labs(x="Elevation", y=NULL, title=" Elevational ranges of herpetofaunal species")+
+  scale_x_continuous(breaks = seq(0, 3500, 100))+
+  theme_bw()
+```
+
+As it can be seen that there are few species that are found in only one elevation, but are not plotted in the map. We will increase their ranges by 10 meter elevation. 
+
+```{r}
+e <- d %>% 
+  mutate (range = Max-Min) %>% 
+  mutate ( MaxAdded = case_when 
+                (range == 0 ~ (Max +10),
+                TRUE ~ Max))
+
+head(e)
+
+```
+
+```{r}
+f <- e %>% select (Species, MaxAdded, Min) %>% 
+  gather(MinMax, value, MaxAdded:Min)
+
+head(f)
+```
+
+Now plotting the final graph
+
+```{r fig.width=8}
+ggplot(f, aes(value, Species, group = Species)) + 
+  geom_line(size = 2.5) +
+  labs(x="Elevation", y=NULL, title=" Elevational ranges of herpetofaunal species")+
+  scale_x_continuous(breaks = seq(0, 3500, 100))+
+  theme_bw()+
+  theme( axis.text.y = element_text(face = 'italic')) # To make species name italic
+  
+
+```
+
+Thanks,  
+Rajesh Sigdel
+  
+  
+**Bibilography**  
+
+[Gautam, B., Chalise, M., Thapa, K., & Bhattarai, S. (2020).Distributional Patterns of Amphibians and Reptiles in Ghandruk. Annapurna Conservation Area, Nepal. *IRCF Reptiles and Amphibians, 27,* 48-49.](https://www.researchgate.net/publication/340393963_Distributional_Patterns_of_Amphibians_and_Reptiles_in_Ghandruk_Annapurna_Conservation_Area_Nepal?fbclid=IwAR1J_azZrR4KQEfIiLuehNbJ9VWUek1Zf_6RoSGGYTKBODSWQLpc-WMMNBc)
+
+  
+
